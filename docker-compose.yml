@@ -1,7 +1,7 @@
 version: '2' 
 services:
   namenode:
-    image: bde2020/hadoop-namenode:1.0.0
+    image: bde2020/hadoop-namenode:1.1.0-hadoop2.7.1
     hostname: namenode
     container_name: namenode
     domainname: hadoop
@@ -17,8 +17,36 @@ services:
       - "50070:50070"
       - "8020:8020"
 
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:1.1.0-hadoop2.7.1
+    hostname: resourcemanager
+    container_name: resourcemanager
+    domainname: hadoop
+    net: hadoop
+    env_file:
+      - ./hadoop.env
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:1.1.0-hadoop2.7.1
+    hostname: historyserver
+    container_name: historyserver
+    domainname: hadoop
+    net: hadoop
+    volumes:
+      - ./data/historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop.env
+
+  nodemanager1:
+    image: bde2020/hadoop-nodemanager:1.1.0-hadoop2.7.1
+    hostname: nodemanager1		    
+    container_name: nodemanager1
+    domainname: hadoop		    
+    env_file:
+      - ./hadoop.env
+
   datanode1:
-    image: bde2020/hadoop-datanode:1.0.0
+    image: bde2020/hadoop-datanode:1.1.0-hadoop2.7.1
     hostname: datanode1
     container_name: datanode1
     domainname: hadoop
@@ -30,7 +58,7 @@ services:
       - ./hadoop.env
 
   datanode2:
-    image: bde2020/hadoop-datanode:1.0.0
+    image: bde2020/hadoop-datanode:1.1.0-hadoop2.7.1
     hostname: datanode2
     container_name: datanode2
     domainname: hadoop
@@ -42,7 +70,7 @@ services:
       - ./hadoop.env
 
   spark-master:
-    image: earthquakesan/hadoop-spark-master:1.0.0
+    image: bde2020/spark-master:2.0.0-hadoop2.7-hive
     hostname: spark-master
     container_name: spark-master
     domainname: hadoop
@@ -60,7 +88,7 @@ services:
         - "8080:8080"
 
   spark-worker:
-    image: earthquakesan/hadoop-spark-worker:1.0.0
+    image: bde2020/spark-worker:2.0.0-hadoop2.7-hive
     hostname: spark-worker
     domainname: hadoop
     networks: 
