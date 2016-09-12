@@ -5,6 +5,8 @@ services:
     hostname: namenode
     container_name: namenode
     domainname: hadoop
+    depends_on:
+      - nodemanager1
     networks:
       - hadoop
     volumes:
@@ -22,7 +24,17 @@ services:
     hostname: resourcemanager
     container_name: resourcemanager
     domainname: hadoop
-    net: hadoop
+    depends_on:
+      - namenode
+      - datanode1
+      - datanode2
+    ports:
+      - "9200:8088"
+      - "8030:8030"
+      - "8031:8031"
+      - "8032:8032"
+    networks: 
+      - hadoop
     env_file:
       - ./hadoop.env
 
@@ -31,7 +43,8 @@ services:
     hostname: historyserver
     container_name: historyserver
     domainname: hadoop
-    net: hadoop
+    networks: 
+      - hadoop
     volumes:
       - ./data/historyserver:/hadoop/yarn/timeline
     env_file:
@@ -39,9 +52,11 @@ services:
 
   nodemanager1:
     image: bde2020/hadoop-nodemanager:1.1.0-hadoop2.7.1
-    hostname: nodemanager1		    
+    hostname: nodemanager1    
     container_name: nodemanager1
-    domainname: hadoop		    
+    domainname: hadoop
+    networks: 
+      - hadoop
     env_file:
       - ./hadoop.env
 
@@ -50,6 +65,8 @@ services:
     hostname: datanode1
     container_name: datanode1
     domainname: hadoop
+    depends_on:
+      - namenode
     networks:
       - hadoop
     volumes:
@@ -62,6 +79,8 @@ services:
     hostname: datanode2
     container_name: datanode2
     domainname: hadoop
+    depends_on:
+      - namenode
     networks: 
       - hadoop
     volumes:
@@ -70,7 +89,7 @@ services:
       - ./hadoop.env
 
   spark-master:
-    image: bde2020/spark-master:2.0.0-hadoop2.7-hive
+    image: miciav/hadoop-spark-master
     hostname: spark-master
     container_name: spark-master
     domainname: hadoop
@@ -86,9 +105,10 @@ services:
       - ./hadoop.env
     ports:
         - "8080:8080"
+        - "4040:4040"
 
   spark-worker:
-    image: bde2020/spark-worker:2.0.0-hadoop2.7-hive
+    image: miciav/hadoop-spark-worker
     hostname: spark-worker
     domainname: hadoop
     networks: 
@@ -103,31 +123,67 @@ services:
     env_file:
       - ./hadoop.env
 
-  spark-notebook:
-    image: earthquakesan/hadoop-spark-notebook:1.0.0
-    hostname: sparknotebook
-    container_name: sparknotebook
-    domainname: hadoop
-    networks:
-      - hadoop
+  zeppelin:
+    container_name: zeppelin
+    image: miciav/hadoop-spark-zeppelin
     environment:
-      - SPARK_NOTEBOOK_MASTER=yarn-client
+      ZEPPELIN_PORT: 8090
+      MASTER: spark://spark-master:7077
+        - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+        - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+        - SPARK_CONF_spark_eventLog_enabled=true
+        - SPARK_CONF_spark_eventLog_dir=hdfs://namenode:8020/spark-logs
+        - SPARK_CONF_spark_history_fs_logDirectory=hdfs://namenode:8020/spark-logs
+        - ZEPPELIN_JAVA_OPTS="-Dhdp.version=2.7.1"
+#      KAFKA_ADDRESS: kafka:9092
+#    depends_on:
+#      - kafka
+#      - zookeeper
+#      - cassandra
+#    links:
+#      - cassandra
+#      - master
+    depends_on:
+      - namenode
+      - resourcemanager
+    ports:
+      - "9100:8090"
+      - "8180:8080"
+    volumes:
+      - ./zeppelin/about.json:/usr/zeppelin/notebook/about.json
+      - ./zeppelin/notebooks:/usr/zeppelin/notebook
+      - ./zeppelin/conf:/usr/zeppelin/conf
+    networks:      
+      - hadoop
     env_file:
       - ./hadoop.env
-    ports:
-      - "9000:9000"
 
-  hue:
-    image: bde2020/hdfs-filebrowser:3.9
-    hostname: hdfsfb
-    container_name: hdfsfb
-    domainname: hadoop
-    networks:
-      - hadoop
-    environment:
-      - NAMENODE_HOST=namenode
-    ports:
-      - "8088:8088"
+
+#  spark-notebook:
+#    image: earthquakesan/hadoop-spark-notebook:1.0.0
+#    hostname: sparknotebook
+#    container_name: sparknotebook
+#    domainname: hadoop
+#    networks:
+#      - hadoop
+#    environment:
+#      - SPARK_NOTEBOOK_MASTER=yarn-client
+#    env_file:
+#      - ./hadoop.env
+#    ports:
+#      - "9000:9000"
+
+  # hue:
+  #   image: bde2020/hdfs-filebrowser:3.9
+  #   hostname: hdfsfb
+  #   container_name: hdfsfb
+  #   domainname: hadoop
+  #   networks:
+  #     - hadoop
+  #   environment:
+  #     - NAMENODE_HOST=namenode
+  #   ports:
+  #     - "8088:8088"
 
 networks:
   hadoop:
